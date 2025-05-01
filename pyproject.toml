@@ -1,0 +1,25 @@
+[project]
+name = "dcm2niix-pyw"
+version = "0.1.0"
+description = "Thin dcm2niix wrapper with Python and CLI interfaces."
+readme = "README.md"
+authors = [{ name = "Fernando Pérez-García", email = "fepegar@gmail.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "dcm2niix @ git+https://github.com/rordenlab/dcm2niix@development",
+    "loguru>=0.7.3",
+    "typer",
+]
+
+[project.scripts]
+dcm2niix-pyw = "dcm2niix_pyw:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["ipykernel"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
