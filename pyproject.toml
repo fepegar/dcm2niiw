@@ -15,11 +15,13 @@ dependencies = [
 dcm2niiw = "dcm2niiw:app"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build"]
+build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["ipykernel"]
+dev = [
+    "ipykernel",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
