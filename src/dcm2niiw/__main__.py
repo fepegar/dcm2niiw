@@ -45,6 +45,15 @@ def main(
             file_okay=False,
         ),
     ],
+    out_folder: Annotated[
+        Path,
+        typer.Argument(
+            dir_okay=True,
+            file_okay=False,
+            help="Output directory (omit to save to input folder)",
+            rich_help_panel="Outputs",
+        ),
+    ],
     compress: Annotated[
         bool,
         typer.Option(),
@@ -125,26 +134,6 @@ def main(
             rich_help_panel="Outputs",
         ),
     ] = False,
-    out_folder: Annotated[
-        Path | None,
-        typer.Option(
-            "--out-folder",
-            "-o",
-            dir_okay=True,
-            file_okay=False,
-            help="Output directory (omit to save to input folder)",
-            rich_help_panel="Outputs",
-        ),
-    ] = None,
-    out_file: Annotated[
-        Path | None,
-        typer.Option(
-            dir_okay=False,
-            file_okay=True,
-            help="Output file path (sets depth to 0 and ignores out_folder)",
-            rich_help_panel="Outputs",
-        ),
-    ] = None,
     write_behavior: Annotated[
         WriteBehavior,
         typer.Option(
@@ -198,6 +187,7 @@ def main(
     )
     dcm2niiw(
         in_folder,
+        out_folder,
         *context.args,
         compress=compress,
         compression_level=compression_level,
@@ -207,9 +197,7 @@ def main(
         export_format=export_format,
         filename_format=filename_format,
         ignore=ignore,
-        out_folder=out_folder,
         verbosity=verbose,
-        out_path=out_file,
         write_behavior=write_behavior,
         is_cli=True,
     )

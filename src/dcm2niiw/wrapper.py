@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import shutil
-import tempfile
 from itertools import chain
 from pathlib import Path
 from subprocess import CompletedProcess
@@ -27,6 +25,7 @@ from .enums import write_behavior_to_int
 
 def dcm2niiw(
     in_folder: Path,
+    out_folder: Path,
     *args: str,
     compress: bool = DEFAULT_COMPRESS,
     compression_level: int = DEFAULT_COMPRESSION,
@@ -36,17 +35,11 @@ def dcm2niiw(
     export_format: Format = DEFAULT_FORMAT,
     filename_format: str = DEFAULT_FILENAME_FORMAT,
     ignore: bool = False,
-    out_folder: Path | None = None,
     verbosity: int = DEFAULT_VERBOSE_LEVEL,
-    out_path: Path | None = None,
     write_behavior: WriteBehavior = DEFAULT_WRITE_BEHAVIOR,
     is_cli: bool = False,
 ) -> None:
     verbosity = min(verbosity, MAX_VERBOSE_LEVEL)
-    if out_path is not None:
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        depth = 0
-        out_folder = Path(tempfile.mkdtemp())
     command_lines = [
         f"  -a {_bool_to_yn(adjacent)} \\",
         f"  -d {depth} \\",
@@ -80,24 +73,6 @@ def dcm2niiw(
         command_lines.append("  " + " \\\n  ".join(args))
 
     _dcm2niix_with_logging(*command_lines)
-
-    if out_path is not None:
-        assert out_folder is not None
-        out_paths = list(out_folder.iterdir())
-        out_paths = [p for p in out_paths if p.suffix != ".json"]
-        if len(out_paths) > 1:
-            msg = (
-                "More than one output file found. Output file not written. The"
-                f' temporary directory "{out_folder}" will not be deleted'  # type: ignore
-            )
-            logger.warning(msg)
-            return
-
-        shutil.move(
-            out_paths[0],
-            out_path,
-        )
-        shutil.rmtree(out_folder)
 
 
 def _bool_to_yn(value: bool) -> str:
@@ -133,8 +108,11 @@ def _dcm2niix_with_logging(*lines: str) -> None:
 def dcm2niix(*args: str) -> CompletedProcess:
     from dcm2niix import bin as dcm2niix_path
 
+    args_list = [arg.strip("\\\n") for arg in args]
+    args_list = [arg for arg in args_list if arg]  # remove empty strings
+
     return run(
-        [dcm2niix_path] + list(args),
+        [dcm2niix_path] + args_list,
         capture_output=True,
         text=True,
     )
