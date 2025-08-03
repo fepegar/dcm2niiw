@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dcm2niiw = "dcm2niiw:app"
+dcm2niiw = "dcm2niiw.__main__:app"
 
 [build-system]
 requires = ["uv_build"]
@@ -23,5 +23,5 @@ dev = [
     "ipykernel",
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.ruff.lint.isort]
+force-single-line = true
