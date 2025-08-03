@@ -1,5 +1,5 @@
 [project]
-name = "dcm2niix-pyw"
+name = "dcm2niiw"
 version = "0.1.0"
 description = "Thin dcm2niix wrapper with Python and CLI interfaces."
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dcm2niix-pyw = "dcm2niix_pyw:app"
+dcm2niiw = "dcm2niiw:app"
 
 [build-system]
 requires = ["hatchling"]
