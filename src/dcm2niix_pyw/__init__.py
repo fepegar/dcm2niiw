@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import enum
 import shutil
+import sys
 import tempfile
+from itertools import chain
 from pathlib import Path
-from subprocess import run
+from subprocess import CompletedProcess, run
 
 import typer
 from loguru import logger
+from rich import print
 from typing_extensions import Annotated
-
-
-app = typer.Typer()
 
 
 class Format(str, enum.Enum):
@@ -31,14 +31,44 @@ format_to_string = {
 }
 
 
+class LogLevel(enum.Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+
+
+class WriteBehavior(enum.Enum):
+    skip = "skip"  # skip duplicates
+    overwrite = "overwrite"  # overwrite existing files
+    add_suffix = "suffix"  # add suffix to avoid overwriting
+
+
+write_behavior_to_int = {
+    WriteBehavior.skip: 0,
+    WriteBehavior.overwrite: 1,
+    WriteBehavior.add_suffix: 2,
+}
+
+
 _DEFAULT_COMPRESSION = 6
-_DEFAULT_COMPRESS = False
+_DEFAULT_COMPRESS = True  # originally False
 _DEFAULT_DEPTH = 5
 _DEFAULT_FORMAT = Format.nifti
 _DEFAULT_FILENAME_FORMAT = "%f_%p_%t_%s"
 _DEFAULT_VERBOSE_LEVEL = 0
+_DEFAULT_WRITE_BEHAVIOR = WriteBehavior.overwrite  # originally add suffix
 _MAX_COMMENT_LENGTH = 24
 _MAX_VERBOSE_LEVEL = 2
+
+
+def help_callback(value: bool) -> None:
+    if value:
+        print(_dcm2niix("-h").stdout)
+        raise typer.Exit()
+
+
+app = typer.Typer()
 
 
 @app.command(
@@ -65,7 +95,7 @@ def main(
         typer.Option(
             min=1,
             max=9,
-            help="Gunzip compression level (1=fastest..9=smallest, default 6)",
+            help="Gunzip compression level (1=fastest..9=smallest)",
         ),
     ] = _DEFAULT_COMPRESSION,
     adjacent: Annotated[
@@ -98,6 +128,7 @@ def main(
             min=0,
             max=9,
             help="Directory search depth (convert DICOMs in sub-folders of in_folder?)",
+            rich_help_panel="Inputs",
         ),
     ] = _DEFAULT_DEPTH,
     export_format: Annotated[
@@ -107,6 +138,7 @@ def main(
             "-e",
             case_sensitive=False,
             help="Output file format",
+            rich_help_panel="Outputs",
         ),
     ] = _DEFAULT_FORMAT,
     filename_format: Annotated[
@@ -122,6 +154,7 @@ def main(
                 " %p=protocol, %r=instance number, %s=series number, %t=time,"
                 " %u=acquisition number, %v=vendor, %x=study ID; %z=sequence name)"
             ),
+            rich_help_panel="Outputs",
         ),
     ] = _DEFAULT_FILENAME_FORMAT,
     ignore: Annotated[
@@ -130,6 +163,7 @@ def main(
             "--ignore/--no-ignore",
             "-i",
             help="Ignore derived, localizer and 2D images",
+            rich_help_panel="Outputs",
         ),
     ] = False,
     out_folder: Annotated[
@@ -140,6 +174,7 @@ def main(
             dir_okay=True,
             file_okay=False,
             help="Output directory (omit to save to input folder)",
+            rich_help_panel="Outputs",
         ),
     ] = None,
     out_file: Annotated[
@@ -148,14 +183,46 @@ def main(
             dir_okay=False,
             file_okay=True,
             help="Output file path (sets depth to 0 and ignores out_folder)",
+            rich_help_panel="Outputs",
         ),
     ] = None,
+    write_behavior: Annotated[
+        WriteBehavior,
+        typer.Option(
+            "--write-behavior",
+            "-w",
+            case_sensitive=False,
+            help="Behavior when output file already exists.",
+            rich_help_panel="Outputs",
+        ),
+    ] = _DEFAULT_WRITE_BEHAVIOR,
+    print_help: Annotated[
+        bool,
+        typer.Option(
+            "--print-help",
+            "-h",
+            is_eager=True,
+            callback=help_callback,
+            help="Print dcm2niix help message and exit.",
+        ),
+    ] = False,
+    log_level: Annotated[
+        LogLevel,
+        typer.Option(
+            "--log",
+            case_sensitive=False,
+            help="Set the log level",
+            rich_help_panel="Logging",
+        ),
+    ] = LogLevel.DEBUG,
     verbose: Annotated[
         int,
         typer.Option(
             "--verbose",
             "-v",
             count=True,
+            help=("Verbosity level. Use up to three times to increase verbosity."),
+            rich_help_panel="Logging",
         ),
     ] = _DEFAULT_VERBOSE_LEVEL,
     context: typer.Context = typer.Option(
@@ -163,6 +230,13 @@ def main(
         help="[Extra arguments to be added to the command]",
     ),
 ) -> None:
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        level=log_level.value,
+        colorize=True,
+    )
     dcm2niix(
         in_folder,
         *context.args,
@@ -177,6 +251,7 @@ def main(
         out_folder=out_folder,
         verbosity=verbose,
         out_path=out_file,
+        write_behavior=write_behavior,
     )
 
 
@@ -194,32 +269,28 @@ def dcm2niix(
     out_folder: Path | None = None,
     verbosity: int = _DEFAULT_VERBOSE_LEVEL,
     out_path: Path | None = None,
+    write_behavior: WriteBehavior = _DEFAULT_WRITE_BEHAVIOR,
 ) -> None:
     if "-h" in args:
         _call_dcm2niix("-h")
         return
     verbosity = min(verbosity, _MAX_VERBOSE_LEVEL)
     if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         depth = 0
         out_folder = Path(tempfile.mkdtemp())
-    args_for_cli: list[str | Path | int | Format] = [
-        "-a",
-        _bool_to_yn(adjacent),
-        "-d",
-        str(depth),
-        "-e",
-        format_to_string[export_format],
-        "-f",
-        filename_format,
-        "-i",
-        _bool_to_yn(ignore),
-        "-v",
-        verbosity,
-        "-z",
-        _bool_to_yn(compress),
+    command_lines = [
+        f"  -a {_bool_to_yn(adjacent)} \\",
+        f"  -d {depth} \\",
+        f"  -e {format_to_string[export_format]} \\",
+        f"  -f {filename_format} \\",
+        f"  -i {_bool_to_yn(ignore)} \\",
+        f"  -v {verbosity} \\",
+        f"  -z {_bool_to_yn(compress)} \\",
+        f"  -w {write_behavior_to_int[write_behavior]} \\",
     ]
     if compress:
-        args_for_cli.append(f"-{compression_level}")
+        command_lines.append(f"  -{compression_level} \\")
     if comment is not None:
         length = len(comment)
         if length > _MAX_COMMENT_LENGTH:
@@ -228,14 +299,15 @@ def dcm2niix(
                 f"{_MAX_COMMENT_LENGTH} characters"
             )
             raise ValueError(msg)
-        args_for_cli.extend(["-c", comment])
+        command_lines.append(f'  -c "{comment}" \\')
     if out_folder is not None:
-        args_for_cli.extend(["-o", out_folder])
-    args_for_cli.append(in_folder)
-    args_for_cli += list(args)
+        out_folder.mkdir(parents=True, exist_ok=True)
+        command_lines.append(f"  -o {out_folder} \\")
+    command_lines.append(f"  {in_folder} \\")
+    if args:
+        command_lines.append("  " + " \\\n  ".join(args))
 
-    args_for_cli_str = [str(arg) for arg in args_for_cli]
-    _call_dcm2niix(*args_for_cli_str)
+    _call_dcm2niix(*command_lines)
 
     if out_path is not None:
         assert out_folder is not None
@@ -261,25 +333,36 @@ def _bool_to_yn(value: bool) -> str:
     return "y" if value else "n"
 
 
-def _call_dcm2niix(*args: str) -> None:
+def _call_dcm2niix(*lines: str) -> None:
     from dcm2niix import bin as dcm2niix_path
 
     logger.debug("The following command will be run:")
-    logger.debug(f"{Path(dcm2niix_path).name} {' '.join(args)}")
-    output = run(
-        [dcm2niix_path] + list(args),
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    lines_str = "\n".join(lines).strip(" \\")
+    logger.debug(f"\n{dcm2niix_path} \\\n  {lines_str}")
+    args = chain.from_iterable([line.strip("  \\").split() for line in lines])
+    output = _dcm2niix(*args)
     if output.returncode != 0:
         logger.error(f"dcm2niix failed with error code {output.returncode}")
         logger.error(output.stderr)
-        raise RuntimeError(f"dcm2niix failed: {output.stderr}")
+
     for line in output.stdout.splitlines():
         if line.startswith("Warning: "):
+            line = line.strip("Warning: ")
             log = logger.warning
+        elif line.startswith("Conversion required"):
+            log = logger.success
+        elif line.startswith("Chris Rorden"):
+            log = logger.debug
         else:
             log = logger.info
         log(line)
-    logger.success("dcm2niix completed successfully")
+
+
+def _dcm2niix(*args: str) -> CompletedProcess:
+    from dcm2niix import bin as dcm2niix_path
+
+    return run(
+        [dcm2niix_path] + list(args),
+        capture_output=True,
+        text=True,
+    )
