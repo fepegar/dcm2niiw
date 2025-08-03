@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 dcm2niiw = "dcm2niiw.__main__:app"
+dcm2hdr = "dcm2niiw.headers:app"
 
 [build-system]
 requires = ["uv_build"]

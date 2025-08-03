@@ -4,6 +4,7 @@ from typing import Any
 from typing import Iterable
 
 import pydicom
+import typer
 
 
 def read_dicom(path: Path) -> pydicom.Dataset:
@@ -84,3 +85,25 @@ def write_series_headers_json(dicom_dir: Path, output_path: Path):
     series_id_to_first_header_dict = get_series_id_to_first_header(paths, as_dict=True)
     with Path(output_path).open("w") as f:
         json.dump(series_id_to_first_header_dict, f, indent=2, ensure_ascii=False)
+
+
+app = typer.Typer()
+
+
+@app.command()
+def main(
+    dicom_dir: Path = typer.Argument(
+        ...,
+        exists=True,
+        dir_okay=True,
+        file_okay=False,
+        help="Directory containing DICOM files",
+    ),
+    output_path: Path = typer.Argument(
+        ...,
+        dir_okay=False,
+        file_okay=True,
+        help="Output JSON file path for series headers",
+    ),
+):
+    write_series_headers_json(dicom_dir, output_path)
