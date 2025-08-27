@@ -5,7 +5,7 @@ Thin wrapper around [dcm2niix](https://github.com/rordenlab/dcm2niix) with some 
 ## CLI
 
 ```shell
-uv tool install git+https://github.com/fepegar/dcm2niiw
+uv tool install dcm2niiw
 dcm2niiw --help
 dcm2hdr --help
 ```
@@ -14,7 +14,7 @@ dcm2hdr --help
 
 ```shell
 uv init
-uv add git+https://github.com/fepegar/dcm2niiw
+uv add dcm2niiw
 uv run python
 ```
 
