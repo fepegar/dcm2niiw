@@ -19,6 +19,6 @@ uv run python
 ```
 
 ```python
->>> from dcm2niiw import dcm2niiw
->>> help(dcm2niiw)
+>>> from dcm2niiw import dcm2nii
+>>> help(dcm2nii)
 ```

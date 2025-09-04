@@ -23,7 +23,7 @@ from .enums import format_to_string
 from .enums import write_behavior_to_int
 
 
-def dcm2niiw(
+def dcm2nii(
     in_folder: Path,
     out_folder: Path,
     *args: str,

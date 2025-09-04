@@ -1,9 +1,9 @@
 from importlib.metadata import version
 
-from .wrapper import dcm2niiw
+from .wrapper import dcm2nii
 
 __all__ = [
-    "dcm2niiw",
+    "dcm2nii",
 ]
 
 assert __package__ is not None

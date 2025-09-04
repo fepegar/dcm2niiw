@@ -18,7 +18,7 @@ from .defaults import DEFAULT_WRITE_BEHAVIOR
 from .enums import Format
 from .enums import LogLevel
 from .enums import WriteBehavior
-from .wrapper import dcm2niiw
+from .wrapper import dcm2nii
 from .wrapper import dcm2niix
 
 app = typer.Typer()
@@ -185,7 +185,7 @@ def main(
         level=log_level.value,
         colorize=True,
     )
-    dcm2niiw(
+    dcm2nii(
         in_folder,
         out_folder,
         *context.args,
