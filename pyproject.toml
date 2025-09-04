@@ -9,6 +9,7 @@ dependencies = [
     "dcm2niix",
     "loguru>=0.7.3",
     "pydicom>=2.4.4",
+    "tqdm>=4.67.1",
     "typer",
 ]
 
