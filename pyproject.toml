@@ -7,9 +7,9 @@ authors = [{ name = "Fernando Pérez-García", email = "fepegar@gmail.com" }]
 requires-python = ">=3.9"
 dependencies = [
     "dcm2niix",
-    "loguru>=0.7.3",
-    "pydicom>=2.4.4",
-    "tqdm>=4.67.1",
+    "loguru",
+    "pydicom",
+    "tqdm",
     "typer",
 ]
 
