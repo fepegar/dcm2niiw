@@ -3,7 +3,6 @@ name = "dcm2niiw"
 version = "0.1.1"
 description = "Thin dcm2niix wrapper with Python and CLI interfaces."
 readme = "README.md"
-license = { text = "MIT" }
 authors = [{ name = "Fernando Pérez-García", email = "fepegar@gmail.com" }]
 requires-python = ">=3.9"
 dependencies = [
