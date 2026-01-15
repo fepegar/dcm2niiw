@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from itertools import chain
 from pathlib import Path
-from subprocess import CompletedProcess
-from subprocess import run
+from subprocess import PIPE
+from subprocess import Popen
 
+import loguru
 import typer
+from dcm2niix import bin as dcm2niix_path
 from loguru import logger
 
 from .defaults import DEFAULT_COMPRESS
@@ -82,8 +84,6 @@ def _bool_to_yn(value: bool) -> str:
 
 
 def _dcm2niix_with_logging(*lines: str) -> None:
-    from dcm2niix import bin as dcm2niix_path
-
     loggerw = logger.bind(executable="dcm2niiw")
     loggerx = logger.bind(executable="dcm2niix")
 
@@ -91,32 +91,28 @@ def _dcm2niix_with_logging(*lines: str) -> None:
     lines_str = "\n".join(lines).strip(" \\")
     loggerw.debug(f"{dcm2niix_path} \\\n  {lines_str}")
     args = chain.from_iterable([line.strip("  \\").split() for line in lines])
-    output = dcm2niix(*args)
-    if output.returncode != 0:
-        loggerw.error(f"dcm2niix failed with error code {output.returncode}")
-        loggerw.error(output.stderr)
 
-    for line in output.stdout.splitlines():
-        if line.startswith("Warning: "):
-            line = line.strip("Warning: ")
-            log = loggerx.warning
-        elif line.startswith("Conversion required"):
-            log = loggerx.success
-        elif line.startswith("Chris Rorden"):
-            log = loggerx.debug
-        else:
-            log = loggerx.info
-        log(line)
+    dcm2niix(loggerx, *args)
 
 
-def dcm2niix(*args: str) -> CompletedProcess:
-    from dcm2niix import bin as dcm2niix_path
-
+def dcm2niix(logger: loguru.Logger, *args: str) -> None:
     args_list = [arg.strip("\\\n") for arg in args]
     args_list = [arg for arg in args_list if arg]  # remove empty strings
 
-    return run(
-        [dcm2niix_path] + args_list,
-        capture_output=True,
-        text=True,
-    )
+    cmd = [dcm2niix_path] + args_list
+    with Popen(cmd, stdout=PIPE, stderr=PIPE, text=True, bufsize=1) as p:
+        assert p.stdout is not None
+        assert p.stderr is not None
+
+        for line in p.stdout:
+            line = line.rstrip("\n")
+            if line.startswith("Warning: "):
+                line = line.strip("Warning: ")
+                log = logger.warning
+            elif line.startswith("Conversion required"):
+                log = logger.success
+            elif line.startswith("Chris Rorden"):
+                log = logger.debug
+            else:
+                log = logger.info
+            log(line)
