@@ -9,7 +9,7 @@ from rich import print
 from typing_extensions import Annotated
 
 from .defaults import DEFAULT_COMPRESS
-from .defaults import DEFAULT_COMPRESSION
+from .defaults import DEFAULT_COMPRESSION_LEVEL
 from .defaults import DEFAULT_DEPTH
 from .defaults import DEFAULT_FILENAME_FORMAT
 from .defaults import DEFAULT_FORMAT
@@ -65,7 +65,7 @@ def main(
             max=9,
             help="Gunzip compression level (1=fastest..9=smallest)",
         ),
-    ] = DEFAULT_COMPRESSION,
+    ] = DEFAULT_COMPRESSION_LEVEL,
     adjacent: Annotated[
         bool,
         typer.Option(
@@ -144,7 +144,7 @@ def main(
             rich_help_panel="Outputs",
         ),
     ] = DEFAULT_WRITE_BEHAVIOR,
-    print_help: Annotated[
+    _: Annotated[
         bool,
         typer.Option(
             "--print-help",
@@ -181,7 +181,7 @@ def main(
     logger.remove()
     logger.add(
         sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{extra[executable]}</level> | <level>{level: <8}</level> | <level>{message}</level>",
         level=log_level.value,
         colorize=True,
     )

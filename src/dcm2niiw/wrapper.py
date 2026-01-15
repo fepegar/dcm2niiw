@@ -9,7 +9,7 @@ import typer
 from loguru import logger
 
 from .defaults import DEFAULT_COMPRESS
-from .defaults import DEFAULT_COMPRESSION
+from .defaults import DEFAULT_COMPRESSION_LEVEL
 from .defaults import DEFAULT_DEPTH
 from .defaults import DEFAULT_FILENAME_FORMAT
 from .defaults import DEFAULT_FORMAT
@@ -28,7 +28,7 @@ def dcm2nii(
     out_folder: Path,
     *args: str,
     compress: bool = DEFAULT_COMPRESS,
-    compression_level: int = DEFAULT_COMPRESSION,
+    compression_level: int = DEFAULT_COMPRESSION_LEVEL,
     adjacent: bool = False,
     comment: str | None = None,
     depth: int = DEFAULT_DEPTH,
@@ -50,7 +50,7 @@ def dcm2nii(
         f"  -z {_bool_to_yn(compress)} \\",
         f"  -w {write_behavior_to_int[write_behavior]} \\",
     ]
-    if compress:
+    if compress and compression_level != DEFAULT_COMPRESSION_LEVEL:
         command_lines.append(f"  -{compression_level} \\")
     if comment is not None:
         length = len(comment)
@@ -66,9 +66,10 @@ def dcm2nii(
                 raise ValueError(msg)
         command_lines.append(f'  -c "{comment}" \\')
     if out_folder is not None:
+        out_folder = out_folder.resolve()
         out_folder.mkdir(parents=True, exist_ok=True)
         command_lines.append(f"  -o {out_folder} \\")
-    command_lines.append(f"  {in_folder} \\")
+    command_lines.append(f"  {in_folder.resolve()} \\")
     if args:
         command_lines.append("  " + " \\\n  ".join(args))
 
@@ -83,25 +84,28 @@ def _bool_to_yn(value: bool) -> str:
 def _dcm2niix_with_logging(*lines: str) -> None:
     from dcm2niix import bin as dcm2niix_path
 
-    logger.debug("The following command will be run:")
+    loggerw = logger.bind(executable="dcm2niiw")
+    loggerx = logger.bind(executable="dcm2niix")
+
+    loggerw.debug("The following command will be run:")
     lines_str = "\n".join(lines).strip(" \\")
-    logger.debug(f"\n{dcm2niix_path} \\\n  {lines_str}")
+    loggerw.debug(f"{dcm2niix_path} \\\n  {lines_str}")
     args = chain.from_iterable([line.strip("  \\").split() for line in lines])
     output = dcm2niix(*args)
     if output.returncode != 0:
-        logger.error(f"dcm2niix failed with error code {output.returncode}")
-        logger.error(output.stderr)
+        loggerw.error(f"dcm2niix failed with error code {output.returncode}")
+        loggerw.error(output.stderr)
 
     for line in output.stdout.splitlines():
         if line.startswith("Warning: "):
             line = line.strip("Warning: ")
-            log = logger.warning
+            log = loggerx.warning
         elif line.startswith("Conversion required"):
-            log = logger.success
+            log = loggerx.success
         elif line.startswith("Chris Rorden"):
-            log = logger.debug
+            log = loggerx.debug
         else:
-            log = logger.info
+            log = loggerx.info
         log(line)
 
 

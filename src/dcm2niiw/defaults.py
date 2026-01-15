@@ -1,7 +1,7 @@
 from .enums import Format
 from .enums import WriteBehavior
 
-DEFAULT_COMPRESSION = 6
+DEFAULT_COMPRESSION_LEVEL = 6
 DEFAULT_COMPRESS = True  # originally False
 DEFAULT_DEPTH = 5
 DEFAULT_FORMAT = Format.nifti
