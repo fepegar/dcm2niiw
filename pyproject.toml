@@ -1,6 +1,6 @@
 [project]
 name = "dcm2niiw"
-version = "0.1.1"
+version = "0.1.2"
 description = "Thin dcm2niix wrapper with Python and CLI interfaces."
 readme = "README.md"
 authors = [{ name = "Fernando Pérez-García", email = "fepegar@gmail.com" }]
@@ -28,7 +28,7 @@ dev = [
 ]
 
 [tool.bumpversion]
-current_version = "0.1.1"
+current_version = "0.1.2"
 commit = true
 tag = true
 
