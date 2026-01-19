@@ -133,11 +133,12 @@ def get_series_id_to_first_header(
 def write_series_headers_json(
     dicom_dir: Path,
     output_path: Path,
+    pattern: str = "*",
     progress: bool = True,
     parallel: bool = True,
     **kwargs,
 ):
-    paths = sorted(dicom_dir.rglob("*.dcm"))
+    paths = sorted(dicom_dir.rglob(pattern))
     series_id_to_first_header_dict = get_series_id_to_first_header(
         paths,
         as_dict=True,
@@ -173,6 +174,15 @@ def main(
             help="Output JSON file path for series headers",
         ),
     ],
+    pattern: Annotated[
+        str,
+        typer.Option(
+            "--pattern",
+            "-p",
+            help="Glob pattern to match DICOM files within the directory.",
+            show_default=True,
+        ),
+    ] = "*",
     progress: Annotated[
         bool,
         typer.Option(
@@ -190,6 +200,7 @@ def main(
     write_series_headers_json(
         dicom_dir,
         output_path,
+        pattern=pattern,
         progress=progress,
         parallel=parallel,
     )
