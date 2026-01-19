@@ -9,6 +9,7 @@ import loguru
 import typer
 from dcm2niix import bin as dcm2niix_path
 from loguru import logger
+from rich import print
 
 from .defaults import DEFAULT_COMPRESS
 from .defaults import DEFAULT_COMPRESSION_LEVEL
@@ -92,10 +93,10 @@ def _dcm2niix_with_logging(*lines: str) -> None:
     loggerw.debug(f"{dcm2niix_path} \\\n  {lines_str}")
     args = chain.from_iterable([line.strip("  \\").split() for line in lines])
 
-    dcm2niix(loggerx, *args)
+    dcm2niix(*args, logger=loggerx)
 
 
-def dcm2niix(logger: loguru.Logger, *args: str) -> None:
+def dcm2niix(*args: str, logger: loguru.Logger | None = None) -> None:
     args_list = [arg.strip("\\\n") for arg in args]
     args_list = [arg for arg in args_list if arg]  # remove empty strings
 
@@ -106,7 +107,10 @@ def dcm2niix(logger: loguru.Logger, *args: str) -> None:
 
         for line in p.stdout:
             line = line.rstrip("\n")
-            if line.startswith("Warning: "):
+            if logger is None:
+                print(line)
+                continue
+            elif line.startswith("Warning: "):
                 line = line.strip("Warning: ")
                 log = logger.warning
             elif line.startswith("Conversion required"):

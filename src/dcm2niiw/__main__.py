@@ -5,7 +5,6 @@ from pathlib import Path
 
 import typer
 from loguru import logger
-from rich import print
 from typing_extensions import Annotated
 
 from .defaults import DEFAULT_COMPRESS
@@ -26,7 +25,7 @@ app = typer.Typer()
 
 def help_callback(value: bool) -> None:
     if value:
-        print(dcm2niix("-h").stdout)
+        dcm2niix("-h")
         raise typer.Exit()
 
 
