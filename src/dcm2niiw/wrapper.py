@@ -72,9 +72,10 @@ def dcm2nii(
         out_folder = out_folder.resolve()
         out_folder.mkdir(parents=True, exist_ok=True)
         command_lines.append(f"  -o {out_folder} \\")
-    command_lines.append(f"  {in_folder.resolve()} \\")
     if args:
         command_lines.append("  " + " \\\n  ".join(args))
+    # The input must be at the end of the command
+    command_lines.append(f"  {in_folder.resolve()} \\")
 
     _dcm2niix_with_logging(*command_lines)
 
